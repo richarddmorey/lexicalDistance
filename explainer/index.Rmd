@@ -1,0 +1,151 @@
+---
+title: "Lexical distance data"
+author: "Richard D. Morey"
+date: "21 July 2020"
+output: 
+  html_document:
+    toc: true
+    css: [ "include/css/github.css", 
+           "include/css/ld_task.css" ]
+    includes:
+      in_header:  [ "include/html/include_js.html" ]
+      after_body: [ "include/html/ld_task_js.html" ]
+---
+
+
+<a class="github-fork-ribbon" href="https://github.com/richarddmorey/lexicalDistance/" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
+
+
+```{r include=FALSE}
+si = sessionInfo()
+```
+*This document was compiled under `r si$R.version$version.string` on `r lubridate::now()` (`r  Sys.timezone()`).*
+
+# Experiment
+
+
+Participants judged whether presented digits---2, 3, 4, 6, 7, or 8---represent numbers that are less than or greater than 5 (see [Moyer & Landauer, 1967](https://www.nature.com/articles/2151519a0)).
+
+<div id="ld_demo">
+  <span id="stimulus"></span>
+  <div id="true"></div>
+</div>
+
+You can try an example of the task by moving your mouse into the black area above and clicking once. Then, press the `z`  key to indicate that the number is less than five or press the `/` key to indicate that the number is greater than five. The screen will turn green and a rising tone with sound for a correct answer; the screen will turn red and a single low tone will sound for an incorrect answer.[^screencolor]
+
+[^screencolor]: In the actual task, the screen background color did not change; the background screen color change was added to the demonstration for accessibility reasons.
+
+
+## Stimuli
+
+Stimuli were one of six possible digits (2, 3, 4, 6, 7, or 8) presented in the middle of the screen.
+
+## Experimental procedure
+
+Participants give informed consent and were given instructions on the task, and that pressing `z` or `/` indicated less-than- or greater-than-five judgments, respectively. They were asked to be as accuracy as possible. After the briefing, participants were then seated at a lab computer. Upon pressing a key to indicate that they were ready to start the task, they began judging digits.  
+
+* Correct responses were followed by two quick, high-frequency tones, the second one octave above the other.
+* Incorrect responses were followed by slow buzzing sound.
+
+Fifty-four participants completed 360 total trials, broken into six blocks of 60 trials each. Between the blocks the participant could take a several-minute break.
+
+# Data
+
+The data were collected in the mid-2000s in [Jeff Rouder](https://www.faculty.uci.edu/profile.cfm?faculty_id=6493)'s Perception and Cognition lab at the University of Missouri.
+
+They were published in [Rouder, Lu, Speckman, Sun, and Jiang (2005)](https://link.springer.com/article/10.3758/BF03257252).
+
+The data file `ld5.txt` is has seven fixed-width columns with no header. The columns are:
+
+| Col. # | Width  | Description |
+|-------:|-------:|:------------|
+| 1      |     3  | Participant id (integer, min: 0, max: 58) |
+| 2      |     4  | Experimental block (integer, 0 - 5) |
+| 3      |     5  | trial number within block (integer, 0 - 59) |
+| 4      |     3  | Stimulus (integer, 0 - 5); codes 0-5 represent digits 2, 3, 4, 6, 7, and 8 respectively  |
+| 5      |     3  | Response of the participant (integer, 0 = "less than five", 1 = "greater than five", or 8 = "invalid response") |
+| 6      |     6  | Response time in milliseconds (integer; the few negative RTs are invalid trials) |
+| 7      |     2  | Whether the response was correct (integer, 0 = correct, 1 = incorrect) |
+
+Each row represents an individual trial.
+
+Note that whether a response was correct or incorrect is coded opposite to the usual convention.
+
+The file is, unfortunately, not given as it was originally originally written. Jeff Rouder says this:
+
+> "I cannot find the original data files for this experiment.  This file has been floating around in my teaching files as an example of cleaning.  It is the data we used, for sure, but I am not thrilled that there is no audit trail.  It might be in the filesystem, but I cant find it."
+
+(Practically, this means that the data file provided here is a concatenation of the original data files, and will be identical in all other respects).
+
+You can read the data into R and do some initial tidying with the following code:
+
+```{r warning = FALSE, message = FALSE}
+## The following code requires the R libraries
+#   here
+#   dplyr
+#   readr
+##
+
+library(dplyr)
+
+readr::read_delim(here::here("data/ld5.txt"), delim = " ",
+                  trim_ws = TRUE,
+                  col_names = c("id","block","trial",
+                                "stim","resp","rt","correct"),
+                  col_types = "iiiiidi") %>%
+  mutate(id = factor(id),
+         correct = !correct, # Weirdly, 0 is "correct" in file
+         stim = case_when(   # Recode stimuli
+           stim %in% 0:2 ~ stim + 2L,
+           stim %in% 3:5 ~ stim + 3L,
+           TRUE ~ NA_integer_
+         )) -> ld5
+
+```
+
+
+Upon reading in the data, you should have data from $360\times`r nlevels(ld5$id)`=`r format(360*nlevels(ld5$id))`$ individual trials.
+
+The table below shows all the data as it should appear after the above tidying steps.
+
+```{r message=FALSE, echo=FALSE, warning=FALSE}
+ld5 %>%
+  mutate(correct = as.integer(correct)) %>%
+  DT::datatable(
+    filter = 'top',
+    options = list(
+      scrollX = TRUE
+    )
+  )
+```
+
+For convenience, you can use the download button below to download the tidied version of the dataset in CSV format.
+
+```{r echo=FALSE}
+
+tf = tempfile(fileext = ".csv")
+
+ld5 %>%
+  mutate(correct = as.integer(correct)) %>%
+  readr::write_csv(path = tf)
+
+downloadthis::download_file(
+  path = tf,
+  output_name = "lexical_distance",
+  button_label = "Download tidied data",
+  button_type = "warning",
+  has_icon = TRUE,
+  icon = "fa fa-save"
+  )
+```
+
+
+# References
+
+* Moyer, R. S., & Landauer, T. K. (1967). Time required for judgements of numerical inequality. *Nature*, **215**(5109), 1519–1520. https://doi.org/10.1038/2151519a0
+
+* Rouder, J.N., Lu, J., Speckman, P. et al. (2005) A hierarchical model for estimating response time distributions. *Psychonomic Bulletin & Review* **12**, 195–223. https://doi.org/10.3758/BF03257252
+
+<!--
+Task javascript will be inserted here
+-->

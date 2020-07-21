@@ -1,0 +1,13 @@
+<script>
+
+create_stimulus();
+
+$("#ld_demo").hover(
+	function(){
+    $(document).on("keypress.ld", setup_trial);
+    },
+  function(){
+  	$(document).off("keypress.ld");
+  }
+)
+</script>
